@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benedict District - Sales Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.35);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1" fill="white" opacity="0.1"/></svg>');
+            background-size: 20px 20px;
+            opacity: 0.3;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .header p {
+            opacity: 0.95;
+            font-size: 15px;
+            position: relative;
+            z-index: 1;
+            font-weight: 500;
+        }
+        
+        .form-section {
+            padding: 40px 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 28px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2.5px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: white;
+            font-family: inherit;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        input[type="number"] {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+        
+        .calculated {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 24px;
+            border-radius: 12px;
+            margin: 28px 0;
+            text-align: center;
+            border: 2px solid #bae6fd;
+        }
+        
+        .calculated label {
+            margin-bottom: 12px;
+            color: #0369a1;
+            font-size: 12px;
+        }
+        
+        .percentage-display {
+            font-size: 56px;
+            font-weight: 800;
+            color: #0ea5e9;
+            margin-top: 8px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: -2px;
+        }
+        
+        .percentage-display.warning {
+            color: #f59e0b;
+        }
+        
+        .percentage-display.danger {
+            color: #ef4444;
+        }
+        
+        button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(30, 60, 114, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(-1px);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+            transform: translateX(400px);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            z-index: 1000;
+        }
+        
+        .success-message.show {
+            transform: translateX(0);
+        }
+        
+        .history-section {
+            padding: 0 30px 40px;
+        }
+        
+        .history-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .history-card {
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s;
+        }
+        
+        .history-card:hover {
+            border-color: #2a5298;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        
+        .history-time {
+            font-weight: 700;
+            color: #1e3c72;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+        
+        .history-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        
+        .history-detail {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .history-label {
+            font-size: 11px;
+            color: #6b7280;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .history-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .no-history {
+            text-align: center;
+            padding: 40px;
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        .district-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .auto-check-info {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-size: 13px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Sales Tracker</h1>
+            <p>Quick Labor Check</p>
+            <div class="district-badge">Benedict District</div>
+            <div class="auto-check-info">
+                Auto-detecting check time: <strong id="autoCheckTime">Loading...</strong>
+            </div>
+        </div>
+        
+        <form id="laborForm" class="form-section">
+            <div class="form-group">
+                <label for="store">Store Location</label>
+                <select id="store" required>
+                    <option value="">Select your store...</option>
+                    <option value="Richmond">Richmond</option>
+                    <option value="Palomar">Palomar</option>
+                    <option value="Georgetown">Georgetown</option>
+                    <option value="Danville">Danville</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="grossSales">Gross Sales ($)</label>
+                <input type="number" id="grossSales" step="0.01" placeholder="Enter sales amount" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="laborDollars">Labor Dollars ($)</label>
+                <input type="number" id="laborDollars" step="0.01" placeholder="Enter labor cost" required>
+            </div>
+            
+            <div class="calculated">
+                <label>Labor Percentage</label>
+                <div class="percentage-display" id="percentage">0.0%</div>
+            </div>
+            
+            <button type="submit">Submit Check</button>
+        </form>
+        
+        <div class="history-section">
+            <h2 class="history-title">Today's Entries</h2>
+            <div id="historyContainer">
+                <div class="no-history">No entries yet for today</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="success-message" id="successMessage">✓ Entry saved successfully!</div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCg6sdwxr788HymNLHF3skIro7P6SWrvHE",
+            authDomain: "labor-tracker-bbbaa.firebaseapp.com",
+            projectId: "labor-tracker-bbbaa",
+            storageBucket: "labor-tracker-bbbaa.firebasestorage.app",
+            messagingSenderId: "939951401620",
+            appId: "1:939951401620:web:f2cd20c38c8e36a5466281"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // IMPORTANT: Replace with your actual Make.com webhook URL
+        const MAKE_WEBHOOK_URL = 'https://hook.us1.make.com/YOUR_WEBHOOK_URL_HERE';
+        
+        const form = document.getElementById('laborForm');
+        const storeSelect = document.getElementById('store');
+        const grossSalesInput = document.getElementById('grossSales');
+        const laborDollarsInput = document.getElementById('laborDollars');
+        const percentageDisplay = document.getElementById('percentage');
+        const successMessage = document.getElementById('successMessage');
+        const historyContainer = document.getElementById('historyContainer');
+        
+        // Auto-detect check time based on current hour
+        function getAutoCheckTime() {
+            const hour = new Date().getHours();
+            if (hour >= 12 && hour < 15) return '1pm';
+            if (hour >= 15 && hour < 18) return '4pm';
+            if (hour >= 18 && hour < 22) return '7pm';
+            return 'Close';
+        }
+        
+        function updateAutoCheckTimeDisplay() {
+            const autoCheckTime = getAutoCheckTime();
+            document.getElementById('autoCheckTime').textContent = autoCheckTime;
+        }
+        
+        updateAutoCheckTimeDisplay();
+        setInterval(updateAutoCheckTimeDisplay, 60000);
+        
+        // Calculate percentage on input
+        function calculatePercentage() {
+            const sales = parseFloat(grossSalesInput.value) || 0;
+            const labor = parseFloat(laborDollarsInput.value) || 0;
+            
+            if (sales > 0) {
+                const percentage = (labor / sales) * 100;
+                percentageDisplay.textContent = percentage.toFixed(1) + '%';
+                
+                percentageDisplay.classList.remove('warning', 'danger');
+                if (percentage > 35) {
+                    percentageDisplay.classList.add('danger');
+                } else if (percentage > 30) {
+                    percentageDisplay.classList.add('warning');
+                }
+            } else {
+                percentageDisplay.textContent = '0.0%';
+                percentageDisplay.classList.remove('warning', 'danger');
+            }
+        }
+        
+        grossSalesInput.addEventListener('input', calculatePercentage);
+        laborDollarsInput.addEventListener('input', calculatePercentage);
+        
+        function getTodayDateString() {
+            return new Date().toISOString().split('T')[0];
+        }
+        
+        // Load today's entries for selected store
+        async function loadTodaysEntries() {
+            try {
+                const todayDate = getTodayDateString();
+                const selectedStore = storeSelect.value;
+                
+                if (!selectedStore) {
+                    historyContainer.innerHTML = '<div class="no-history">Select a store to view entries</div>';
+                    return;
+                }
+                
+                const querySnapshot = await db.collection('labor_entries')
+                    .where('date', '==', todayDate)
+                    .where('store', '==', selectedStore)
+                    .get();
+                
+                let entries = [];
+                querySnapshot.forEach((doc) => {
+                    entries.push(doc.data());
+                });
+                
+                if (entries.length === 0) {
+                    historyContainer.innerHTML = `<div class="no-history">No entries yet for ${selectedStore} today</div>`;
+                    return;
+                }
+                
+                // Sort by timestamp descending
+                entries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                const html = entries.map(entry => {
+                    const time = new Date(entry.timestamp).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit'
+                    });
+                    
+                    return `
+                        <div class="history-card">
+                            <div class="history-time">${entry.checkTime} Check - ${time}</div>
+                            <div class="history-details">
+                                <div class="history-detail">
+                                    <span class="history-label">Gross Sales</span>
+                                    <span class="history-value">$${parseFloat(entry.grossSales).toFixed(2)}</span>
+                                </div>
+                                <div class="history-detail">
+                                    <span class="history-label">Labor</span>
+                                    <span class="history-value">$${parseFloat(entry.laborDollars).toFixed(2)}</span>
+                                </div>
+                                <div class="history-detail">
+                                    <span class="history-label">Labor %</span>
+                                    <span class="history-value">${entry.percentage}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                historyContainer.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading entries:', error);
+                historyContainer.innerHTML = '<div class="no-history">Error loading entries</div>';
+            }
+        }
+        
+        storeSelect.addEventListener('change', loadTodaysEntries);
+        
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const sales = parseFloat(grossSalesInput.value);
+            const labor = parseFloat(laborDollarsInput.value);
+            const percentage = ((labor / sales) * 100).toFixed(1);
+            
+            const entry = {
+                store: storeSelect.value,
+                checkTime: getAutoCheckTime(),
+                grossSales: sales,
+                laborDollars: labor,
+                percentage: percentage,
+                timestamp: new Date().toISOString(),
+                date: getTodayDateString(),
+                district: 'Benedict'  // Added district identifier
+            };
+            
+            try {
+                // Save to Firebase
+                await db.collection('labor_entries').add(entry);
+                
+                // Send to Make.com webhook
+                try {
+                    await fetch(MAKE_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            location: entry.store,
+                            sales: sales.toString(),
+                            labor_pct: percentage,
+                            check_time: entry.checkTime,
+                            date: entry.date,
+                            district: 'Benedict'
+                        })
+                    });
+                    console.log('Data sent to Make.com webhook');
+                } catch (webhookError) {
+                    console.error('Webhook error (non-blocking):', webhookError);
+                    // Continue even if webhook fails
+                }
+                
+                // Show success message
+                successMessage.classList.add('show');
+                setTimeout(() => {
+                    successMessage.classList.remove('show');
+                }, 3000);
+                
+                // Reset form
+                grossSalesInput.value = '';
+                laborDollarsInput.value = '';
+                percentageDisplay.textContent = '0.0%';
+                percentageDisplay.classList.remove('warning', 'danger');
+                
+                // Reload history
+                loadTodaysEntries();
+            } catch (error) {
+                console.error('Error saving entry:', error);
+                alert('Error saving entry: ' + error.message);
+            }
+        });
+        
+        // Initialize
+        loadTodaysEntries();
+    </script>
+</body>
+</html>
