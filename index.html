@@ -320,7 +320,7 @@
         const db = firebase.firestore();
         
         // IMPORTANT: Replace with your actual Make.com webhook URL
-        const MAKE_WEBHOOK_URL = 'https://hook.us1.make.com/YOUR_WEBHOOK_URL_HERE';
+        const MAKE_WEBHOOK_URL = 'https://hook.us2.make.com/ab4eixtrt8j5did85xm1act5jutfefmd';
         
         // Display current date
         const dateElement = document.getElementById('current-date');
@@ -538,53 +538,9 @@
                 await db.collection('labor_entries').add(entry);
                 console.log('Save successful!');
                 
-                // Query Firebase for last year sales and labor budget, then send to Make.com
+                // Send to Make.com webhook for Slack notification
                 try {
                     const storeName = entry.store.split(' - ')[1]; // Extract just store name (e.g., "Richmond")
-                    
-                    // Calculate last year's date
-                    const today = new Date(entry.date);
-                    const lastYear = new Date(today);
-                    lastYear.setFullYear(today.getFullYear() - 1);
-                    const lastYearDate = lastYear.toISOString().split('T')[0];
-                    
-                    // Query last year's sales
-                    let lySales = 0;
-                    try {
-                        const lySalesQuery = await db.collection('last_year_sales')
-                            .where('store', '==', storeName)
-                            .where('date', '==', lastYearDate)
-                            .limit(1)
-                            .get();
-                        
-                        if (!lySalesQuery.empty) {
-                            lySales = lySalesQuery.docs[0].data().sales;
-                        }
-                    } catch (lyError) {
-                        console.warn('Could not fetch last year sales:', lyError);
-                    }
-                    
-                    // Query labor budget
-                    let laborBudget = 0.25; // Default to 25%
-                    try {
-                        const budgetQuery = await db.collection('labor_budgets')
-                            .where('store', '==', storeName)
-                            .limit(1)
-                            .get();
-                        
-                        if (!budgetQuery.empty) {
-                            laborBudget = budgetQuery.docs[0].data().budget_percentage;
-                        }
-                    } catch (budgetError) {
-                        console.warn('Could not fetch labor budget:', budgetError);
-                    }
-                    
-                    // Calculate hours remaining until 10pm
-                    const hour = new Date().getHours();
-                    let hoursRemaining = 22 - hour; // 22 = 10pm in 24hr format
-                    if (hoursRemaining < 0) hoursRemaining = 0;
-                    
-                    // Send everything to Make.com
                     await fetch(MAKE_WEBHOOK_URL, {
                         method: 'POST',
                         headers: {
@@ -592,17 +548,14 @@
                         },
                         body: JSON.stringify({
                             location: storeName,
-                            sales: parseFloat(entry.grossSales),
-                            labor_pct: parseFloat(entry.percentage),
+                            sales: entry.grossSales.toString(),
+                            labor_pct: entry.percentage,
                             check_time: entry.checkTime,
                             date: entry.date,
-                            district: 'Benedict',
-                            ly_sales: lySales,
-                            labor_budget: laborBudget,
-                            hours_remaining: hoursRemaining
+                            district: 'Benedict'
                         })
                     });
-                    console.log('Data sent to Make.com webhook with last year comparison');
+                    console.log('Data sent to Make.com webhook');
                 } catch (webhookError) {
                     console.error('Webhook error (non-blocking):', webhookError);
                     // Continue even if webhook fails
