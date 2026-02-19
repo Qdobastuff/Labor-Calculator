@@ -255,11 +255,43 @@
                     <label for="storeSelect">Store Location</label>
                     <select id="storeSelect" required>
                         <option value="">Select a store...</option>
-                        <optgroup label="Benedict District">
+                        <optgroup label="Benedict">
                             <option value="2444 - Richmond">2444 - Richmond</option>
                             <option value="2524 - Palomar">2524 - Palomar</option>
                             <option value="2842 - Georgetown">2842 - Georgetown</option>
                             <option value="3286 - Danville">3286 - Danville</option>
+                        </optgroup>
+                        <optgroup label="Faluconer">
+                            <option value="2086 - Euclid">2086 - Euclid</option>
+                            <option value="2114 - Frankfort">2114 - Frankfort</option>
+                            <option value="2294 - Sir Barton">2294 - Sir Barton</option>
+                            <option value="2521 - Tiverton">2521 - Tiverton</option>
+                        </optgroup>
+                        <optgroup label="Maddox">
+                            <option value="2274 - Hurstborne">2274 - Hurstborne</option>
+                            <option value="2546 - Preston">2546 - Preston</option>
+                            <option value="2811 - Middletown">2811 - Middletown</option>
+                            <option value="2837 - Harley Center">2837 - Harley Center</option>
+                        </optgroup>
+                        <optgroup label="Reid">
+                            <option value="2098 - Summit">2098 - Summit</option>
+                            <option value="2131 - Charlestown">2131 - Charlestown</option>
+                            <option value="2431 - Poplar Level">2431 - Poplar Level</option>
+                            <option value="2641 - Dixie Hwy">2641 - Dixie Hwy</option>
+                            <option value="2731 - Veterans">2731 - Veterans</option>
+                            <option value="2880 - Wesley Commons">2880 - Wesley Commons</option>
+                            <option value="3044 - Jeffersonville IN">3044 - Jeffersonville IN</option>
+                            <option value="2166 - Carson">2166 - Carson</option>
+                        </optgroup>
+                        <optgroup label="Spitznagel">
+                            <option value="2021 - Breckenridge Ln">2021 - Breckenridge Ln</option>
+                            <option value="2029 - Schuster">2029 - Schuster</option>
+                            <option value="2493 - Westport Village">2493 - Westport Village</option>
+                            <option value="2632 - S 4th Street">2632 - S 4th Street</option>
+                            <option value="2713 - U OF L">2713 - U OF L</option>
+                            <option value="2753 - Blankenbaker">2753 - Blankenbaker</option>
+                            <option value="2888 - Elizabethtown">2888 - Elizabethtown</option>
+                            <option value="2937 - Jefferson Commons">2937 - Jefferson Commons</option>
                         </optgroup>
                     </select>
                 </div>
@@ -318,9 +350,6 @@
         // Initialize Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        
-        // IMPORTANT: Replace with your actual Make.com webhook URL
-        const MAKE_WEBHOOK_URL = 'https://hook.us2.make.com/ab4eixtrt8j5did85xm1act5jutfefmd';
         
         // Display current date
         const dateElement = document.getElementById('current-date');
@@ -531,50 +560,65 @@
                 date: getTodayDateString()
             };
             
-            console.log('Entry to save:', entry);
+            // Calculate Slack preview
+            const storeName = entry.store.split(' - ')[1] || entry.store;
+            const today = new Date(entry.date);
+            const lastYear = new Date(today);
+            lastYear.setFullYear(today.getFullYear() - 1);
+            const lastYearDate = lastYear.toISOString().split('T')[0];
+            
+            let lySales = 0;
+            let laborBudget = 0.25;
             
             try {
-                console.log('Attempting to save to Firestore...');
-                await db.collection('labor_entries').add(entry);
-                console.log('Save successful!');
-                
-                // Send to Make.com webhook for Slack notification
-                try {
-                    const storeName = entry.store.split(' - ')[1]; // Extract just store name (e.g., "Richmond")
-                    await fetch(MAKE_WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            location: storeName,
-                            sales: entry.grossSales.toString(),
-                            labor_pct: entry.percentage,
-                            check_time: entry.checkTime,
-                            date: entry.date,
-                            district: 'Benedict'
-                        })
-                    });
-                    console.log('Data sent to Make.com webhook');
-                } catch (webhookError) {
-                    console.error('Webhook error (non-blocking):', webhookError);
-                    // Continue even if webhook fails
+                const lySalesQuery = await db.collection('last_year_sales')
+                    .where('store_code', '==', entry.store.split(' - ')[0])
+                    .where('date', '==', lastYearDate)
+                    .limit(1)
+                    .get();
+                if (!lySalesQuery.empty) {
+                    lySales = parseFloat(lySalesQuery.docs[0].data().sales);
                 }
-                
+            } catch (err) {
+                console.warn('Could not fetch LY sales:', err);
+            }
+            
+            const lyDifference = lySales - sales;
+            const hour = new Date().getHours();
+            const hoursRemaining = Math.max(22 - hour, 0);
+            const dollarsPerHour = lyDifference > 0 ? (lyDifference / hoursRemaining).toFixed(0) : 0;
+            const laborVariance = ((percentage / 100) - laborBudget) * 100;
+            
+            let slackMessage = `📊 ${storeName} - ${entry.checkTime} Report\n\n`;
+            slackMessage += `💰 Sales: $${sales.toLocaleString()}\n`;
+            slackMessage += `👥 Labor: ${percentage}%`;
+            if (laborVariance > 1) {
+                slackMessage += ` ⚠️ (${laborVariance.toFixed(1)}% over)`;
+            } else if (laborVariance < -1) {
+                slackMessage += ` ✅ (${Math.abs(laborVariance).toFixed(1)}% under)`;
+            }
+            slackMessage += `\n📈 Last Year: $${lySales.toLocaleString()}\n`;
+            if (sales >= lySales) {
+                slackMessage += `✅ Beating LY by $${(sales - lySales).toLocaleString()}!`;
+            } else if (lyDifference > 0) {
+                slackMessage += `🎯 Need $${lyDifference.toLocaleString()} more\n💵 $${dollarsPerHour}/hr for ${hoursRemaining} hrs`;
+            }
+            
+            const confirmed = confirm(`Slack Preview:\n\n${slackMessage}\n\nSave entry?`);
+            if (!confirmed) return;
+            
+            try {
+                await db.collection('labor_entries').add(entry);
                 successMessage.classList.add('show');
-                setTimeout(() => {
-                    successMessage.classList.remove('show');
-                }, 3000);
+                setTimeout(() => successMessage.classList.remove('show'), 3000);
                 
                 grossSalesInput.value = '';
                 laborDollarsInput.value = '';
                 percentageDisplay.textContent = '0.0%';
                 percentageDisplay.classList.remove('warning', 'danger');
-                
                 loadTodaysEntries();
             } catch (error) {
-                console.error('Error saving entry:', error);
-                alert('Error saving entry: ' + error.message);
+                alert('Error: ' + error.message);
             }
         });
         
