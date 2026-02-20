@@ -569,9 +569,8 @@
             const storeName = entry.store.split(' - ')[1] || entry.store;
             
             // Calculate last year same day of week (364 days = 52 weeks exactly)
-            const today = new Date(entry.date);
-            const lastYear = new Date(today);
-            lastYear.setDate(today.getDate() - 364);
+            const today = new Date(entry.date + 'T12:00:00'); // Add time to avoid timezone issues
+            const lastYear = new Date(today.getTime() - (364 * 24 * 60 * 60 * 1000)); // 364 days in milliseconds
             const lastYearDate = lastYear.toISOString().split('T')[0];
             
             console.log(`Today: ${entry.date} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][today.getDay()]}), LY: ${lastYearDate} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][lastYear.getDay()]})`);
