@@ -567,17 +567,14 @@
             // Show Slack preview popup
             const storeCode = entry.store.split(' - ')[0];
             const storeName = entry.store.split(' - ')[1] || entry.store;
+            
+            // Calculate last year same day of week (364 days = 52 weeks exactly)
             const today = new Date(entry.date);
-            const todayDayOfWeek = today.getDay();
-            
-            const lastYearBase = new Date(today);
-            lastYearBase.setDate(today.getDate() - 364);
-            const lastYearDayOfWeek = lastYearBase.getDay();
-            let dayDiff = todayDayOfWeek - lastYearDayOfWeek;
-            
-            const lastYear = new Date(lastYearBase);
-            lastYear.setDate(lastYearBase.getDate() + dayDiff);
+            const lastYear = new Date(today);
+            lastYear.setDate(today.getDate() - 364);
             const lastYearDate = lastYear.toISOString().split('T')[0];
+            
+            console.log(`Today: ${entry.date} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][today.getDay()]}), LY: ${lastYearDate} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][lastYear.getDay()]})`);
             
             let lySales = 0;
             let laborBudget = 0.25;
