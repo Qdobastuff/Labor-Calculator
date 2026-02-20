@@ -431,7 +431,11 @@
         
         // Get today's date string
         function getTodayDateString() {
-            return new Date().toISOString().split('T')[0];
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
         
         // Load entries for today
@@ -580,13 +584,21 @@
             let closingHour = 22;
             
             try {
+                console.log(`Querying Firebase: store_code="${storeCode}", date="${lastYearDate}"`);
                 const lySalesQuery = await db.collection('last_year_sales')
                     .where('store_code', '==', storeCode)
                     .where('date', '==', lastYearDate)
                     .limit(1)
                     .get();
+                
+                console.log(`Firebase returned ${lySalesQuery.size} results`);
+                
                 if (!lySalesQuery.empty) {
-                    lySales = parseFloat(lySalesQuery.docs[0].data().sales);
+                    const doc = lySalesQuery.docs[0];
+                    lySales = parseFloat(doc.data().sales);
+                    console.log(`Found LY sales: $${lySales} for date ${doc.data().date}`);
+                } else {
+                    console.log(`No LY sales found for ${storeCode} on ${lastYearDate}`);
                 }
                 
                 const budgetQuery = await db.collection('labor_budgets')
