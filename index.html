@@ -402,10 +402,8 @@
         }
         
         // Update the display immediately and every minute
-        document.addEventListener('DOMContentLoaded', function() {
-            updateAutoCheckTimeDisplay();
-            setInterval(updateAutoCheckTimeDisplay, 60000);
-        });
+        updateAutoCheckTimeDisplay();
+        setInterval(updateAutoCheckTimeDisplay, 60000);
         
         // Calculate percentage on input
         function calculatePercentage() {
@@ -566,13 +564,12 @@
                 date: getTodayDateString()
             };
             
-            // Calculate Slack preview
-            const storeCode = entry.store.split(' - ')[0]; // Extract store code (e.g., "2444")
+            // Show Slack preview popup
+            const storeCode = entry.store.split(' - ')[0];
             const storeName = entry.store.split(' - ')[1] || entry.store;
             const today = new Date(entry.date);
             const todayDayOfWeek = today.getDay();
             
-            // Find last year's same day of week
             const lastYearBase = new Date(today);
             lastYearBase.setDate(today.getDate() - 364);
             const lastYearDayOfWeek = lastYearBase.getDay();
@@ -612,7 +609,7 @@
                     closingHour = settingsQuery.docs[0].data().closing_hour;
                 }
             } catch (err) {
-                console.warn('Could not fetch comparison data:', err);
+                console.warn('Firebase query error:', err);
             }
             
             const lyDifference = lySales - sales;
@@ -641,18 +638,18 @@
             
             try {
                 await db.collection('labor_entries').add(entry);
+                
                 successMessage.classList.add('show');
-                setTimeout(() => successMessage.classList.remove('show'), 3000);
+                setTimeout(() => {
+                    successMessage.classList.remove('show');
+                }, 3000);
                 
                 grossSalesInput.value = '';
                 laborDollarsInput.value = '';
                 percentageDisplay.textContent = '0.0%';
                 percentageDisplay.classList.remove('warning', 'danger');
+                
                 loadTodaysEntries();
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
-        });
             } catch (error) {
                 console.error('Error saving entry:', error);
                 alert('Error saving entry: ' + error.message);
