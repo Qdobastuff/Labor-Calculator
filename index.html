@@ -195,6 +195,20 @@
             color: #999;
         }
         
+        .slack-preview {
+            display: none;
+            background: #1a1d21;
+            border-left: 4px solid #4a9eff;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            color: #d1d2d3;
+            font-family: 'Slack-Lato', 'Lato', sans-serif;
+            font-size: 14px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
         .success-message {
             background: #10b981;
             color: white;
@@ -246,8 +260,12 @@
         </div>
         
         <div class="form-section">
+            <div id="slackPreview" class="slack-preview" id="slackPreview">
+                <div id="slackPreviewBody"></div>
+            </div>
+
             <div class="success-message" id="successMessage">
-                ✓ Entry saved successfully!
+                ✓ Entry saved & posted to Slack!
             </div>
             
             <form id="laborForm">
@@ -639,12 +657,15 @@
             }
             
             const lyDifference = lySales - sales;
-            const hour = new Date().getHours();
+            const now = new Date();
+            const hour = now.getHours();
             const hoursRemaining = Math.max(closingHour - hour, 0);
             const dollarsPerHour = lyDifference > 0 && hoursRemaining > 0 ? (lyDifference / hoursRemaining).toFixed(0) : 0;
             const laborVariance = ((percentage / 100) - laborBudget) * 100;
             
-            let slackMessage = `📊 ${storeName} - ${entry.checkTime} Report\n\n`;
+            const actualTime = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+            
+            let slackMessage = `📊 ${storeName} - ${entry.checkTime} (${actualTime})\n\n`;
             slackMessage += `💰 Sales: $${sales.toLocaleString()}\n`;
             slackMessage += `👥 Labor: ${percentage}%`;
             if (laborVariance > 1) {
@@ -659,36 +680,49 @@
                 slackMessage += `🎯 Need $${lyDifference.toLocaleString()} more\n💵 $${dollarsPerHour}/hr for ${hoursRemaining} hrs`;
             }
             
-            const confirmed = confirm(`Slack Preview:\n\n${slackMessage}\n\nSave entry?`);
-            if (!confirmed) return;
-            
+            // Show inline preview (no confirm dialog)
+            const previewEl = document.getElementById('slackPreview');
+            const previewBody = document.getElementById('slackPreviewBody');
+            if (previewEl && previewBody) {
+                previewBody.textContent = slackMessage;
+                previewEl.style.display = 'block';
+                previewEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // Stores allowed to post to Slack
+            const SLACK_STORES = ['2444', '2524', '2842', '3286'];
+
             try {
                 await db.collection('labor_entries').add(entry);
                 
-                // Send data to Make.com webhook → posts to Slack
-                try {
-                    await fetch(MAKE_WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            store: entry.store,
-                            storeName: storeName,
-                            storeCode: storeCode,
-                            checkTime: entry.checkTime,
-                            grossSales: entry.grossSales,
-                            laborDollars: entry.laborDollars,
-                            percentage: entry.percentage,
-                            lySales: lySales,
-                            laborVariance: laborVariance.toFixed(1),
-                            dollarsPerHour: dollarsPerHour,
-                            hoursRemaining: hoursRemaining,
-                            slackMessage: slackMessage,
-                            timestamp: entry.timestamp
-                        })
-                    });
-                    console.log('Make webhook triggered successfully');
-                } catch (webhookErr) {
-                    console.warn('Make webhook failed (entry still saved):', webhookErr);
+                // Send data to Make.com webhook → posts to Slack (only for your 4 stores)
+                if (SLACK_STORES.includes(storeCode)) {
+                    try {
+                        await fetch(MAKE_WEBHOOK_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                store: entry.store,
+                                storeName: storeName,
+                                storeCode: storeCode,
+                                checkTime: entry.checkTime,
+                                grossSales: entry.grossSales,
+                                laborDollars: entry.laborDollars,
+                                percentage: entry.percentage,
+                                lySales: lySales,
+                                laborVariance: laborVariance.toFixed(1),
+                                dollarsPerHour: dollarsPerHour,
+                                hoursRemaining: hoursRemaining,
+                                slackMessage: slackMessage,
+                                timestamp: entry.timestamp
+                            })
+                        });
+                        console.log('Make webhook triggered successfully');
+                    } catch (webhookErr) {
+                        console.warn('Make webhook failed (entry still saved):', webhookErr);
+                    }
+                } else {
+                    console.log(`Store ${storeCode} not in Slack list — skipping webhook`);
                 }
                 
                 successMessage.classList.add('show');
